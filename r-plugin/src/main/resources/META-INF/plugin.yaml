@@ -1,0 +1,6 @@
+id: restaurant-copilot
+name: AI 店长助手
+version: 1.0.0
+author: xfg-studio
+description: AI 店长助手，支持桌台看板、菜单与毛利查询、开台点菜、结账清台、经营分析（流水/翻台率/毛利率/Top 菜品/库存预警）。
+entrypoint: cn.xiaofuge.r.plugin.RestaurantPlugin

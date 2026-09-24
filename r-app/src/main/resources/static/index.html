@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 店长台 · Restaurant Ops</title>
+<style>
+  :root{
+    --bg:#f7f5f0; --card:#fff; --ink:#2f2a20; --sub:#84796a; --line:#e9e2d5;
+    --brick:#b5541c; --brick-soft:#fbeee4; --ok:#2f9e5f; --hot:#d94f4f; --warn:#e8930c;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:linear-gradient(120deg,#8a3d10,#b5541c 60%,#d4763a);color:#fff;padding:18px 32px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+  header h1{font-size:21px}
+  header .meta{font-size:13px;opacity:.9}
+  .wrap{max-width:1440px;margin:0 auto;padding:20px 24px 40px;display:flex;gap:20px;align-items:flex-start}
+  .main{flex:1;min-width:0}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:18px}
+  .panel h2{font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .panel h2 .dot{width:8px;height:8px;border-radius:50%;background:var(--brick)}
+  .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+  .stat{background:#fbf8f2;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .stat .k{font-size:12px;color:var(--sub)}
+  .stat .v{font-size:19px;font-weight:700;margin-top:4px;color:var(--brick)}
+  .stat .v small{font-size:12px;color:var(--sub);font-weight:400}
+  .tables{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .tb{border:1px solid var(--line);border-radius:10px;padding:12px;background:#fff;position:relative}
+  .tb .n{font-weight:700;font-size:14px}
+  .tb .z{font-size:11px;color:var(--sub);margin-top:2px}
+  .tb .st{margin-top:8px;font-size:12px;font-weight:600;border-radius:6px;padding:3px 8px;display:inline-block}
+  .st-free{background:#e9f6ee;color:var(--ok)}
+  .st-busy{background:#fbeee4;color:var(--brick)}
+  .st-dirty{background:#fdf3e2;color:var(--warn)}
+  .st-resv{background:#eef1fb;color:#4056c7}
+  .tb .od{font-size:11px;color:var(--sub);margin-top:6px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{background:#f9f5ee;text-align:left;padding:8px 10px;color:var(--sub);border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:8px 10px;border-bottom:1px solid #f4efe5}
+  tr:last-child td{border-bottom:none}
+  .hot-tag{font-size:10px;color:#fff;background:var(--hot);border-radius:5px;padding:1px 6px;font-weight:700}
+  .oos{color:var(--hot);font-weight:700}
+  .warn-stock{color:var(--warn);font-weight:700}
+  .margin{color:var(--ok);font-weight:600}
+  /* AI */
+  .side{width:380px;flex-shrink:0;position:sticky;top:16px}
+  .ai{background:var(--card);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;height:calc(100vh - 60px);overflow:hidden}
+  .ai-head{background:linear-gradient(120deg,#b5541c,#d4763a);color:#fff;padding:14px 16px;font-weight:600;font-size:15px}
+  .ai-head small{display:block;font-weight:400;font-size:11px;opacity:.85;margin-top:2px}
+  .ai-log{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#fcfaf6}
+  .msg{max-width:88%;padding:9px 12px;border-radius:10px;font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+  .msg.user{align-self:flex-end;background:var(--brick);color:#fff;border-bottom-right-radius:3px}
+  .msg.bot{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:3px}
+  .ai-input{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line);background:#fff}
+  .ai-input textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;height:44px;outline:none}
+  .ai-input textarea:focus{border-color:var(--brick)}
+  .ai-input button{background:var(--brick);color:#fff;border:none;border-radius:8px;padding:0 18px;font-size:13px;cursor:pointer}
+  .ai-input button:disabled{opacity:.55;cursor:not-allowed}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 10px;background:#fff}
+  .chip{font-size:11px;color:var(--brick);background:var(--brick-soft);border:1px solid #eed9c6;border-radius:20px;padding:3px 10px;cursor:pointer}
+  .hint{font-size:11px;color:var(--sub);padding:0 14px 10px;background:#fff}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>🍽️ AI 店长台</h1><div class="meta">桌台 · 菜品 · 订单 · 经营分析 | 2026-09-24 午市</div></div>
+  <div class="meta" id="headStat"></div>
+</header>
+<div class="wrap">
+  <div class="main">
+    <div class="panel">
+      <h2><span class="dot"></span>午市经营</h2>
+      <div class="stats" id="stats"></div>
+    </div>
+    <div class="panel">
+      <h2><span class="dot"></span>桌台看板</h2>
+      <div class="tables" id="tables"></div>
+    </div>
+    <div class="panel">
+      <h2><span class="dot"></span>菜品销量与毛利</h2>
+      <table><thead><tr><th>菜品</th><th>分类</th><th>售价</th><th>毛利率</th><th>今日销量</th><th>库存</th><th>标签</th></tr></thead>
+      <tbody id="dishes"></tbody></table>
+    </div>
+  </div>
+  <aside class="side">
+    <div class="ai">
+      <div class="ai-head">🤖 AI 店长助手<small>restaurant-copilot · 桌台 / 点菜 / 结账 / 经营分析</small></div>
+      <div class="ai-log" id="log"></div>
+      <div class="chips" id="chips"></div>
+      <div class="hint">Enter 发送 · Shift+Enter 换行</div>
+      <div class="ai-input">
+        <textarea id="q" placeholder="例如：今天生意怎么样？给点经营建议"></textarea>
+        <button id="send">发送</button>
+      </div>
+    </div>
+  </aside>
+</div>
+<script>
+const fmt = n => '¥' + Number(n).toLocaleString('zh-CN');
+async function j(url, opt){ const r = await fetch(url,opt); const d = await r.json(); return d.data!==undefined?d.data:d; }
+const ST_CLS = {'空闲':'st-free','就餐中':'st-busy','待清台':'st-dirty','预订':'st-resv'};
+async function refresh(){
+  const a = await j('/api/analysis');
+  document.getElementById('headStat').textContent = `流水 ${fmt(a.revenue)} · 翻台 ${a.turnoverRate} · 毛利 ${a.grossMarginRate}%`;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="k">午市流水</div><div class="v">${fmt(a.revenue)}</div></div>
+    <div class="stat"><div class="k">订单数</div><div class="v">${a.orderCount}</div></div>
+    <div class="stat"><div class="k">翻台率</div><div class="v">${a.turnoverRate}<small> 轮</small></div></div>
+    <div class="stat"><div class="k">毛利率</div><div class="v">${a.grossMarginRate}%</div></div>
+    <div class="stat"><div class="k">库存预警</div><div class="v" style="color:${a.stockWarnings.length?'var(--warn)':'var(--ok)'}">${a.stockWarnings.length}</div></div>`;
+  const ts = await j('/api/tables');
+  document.getElementById('tables').innerHTML = ts.map(t=>`
+    <div class="tb"><div class="n">${t.name}</div><div class="z">${t.zone} · ${t.seats} 座</div>
+      <span class="st ${ST_CLS[t.status]}">${t.status}</span>
+      ${t.orderId?`<div class="od">${t.orderId}${t.guests?` · ${t.guests} 人`:''}</div>`:''}
+    </div>`).join('');
+  const ds = await j('/api/dishes');
+  document.getElementById('dishes').innerHTML = ds.map(d=>{
+    const mr = Math.round((d.price-d.cost)/d.price*1000)/10;
+    return `<tr><td><b>${d.name}</b></td><td>${d.category}</td><td>${fmt(d.price)}</td>
+      <td class="margin">${mr}%</td><td>${d.soldToday}</td>
+      <td class="${d.stock===0?'oos':d.stock<=15?'warn-stock':''}">${d.stock===0?'售罄':d.stock}</td>
+      <td>${d.tag?`<span class="hot-tag">${d.tag}</span>`:''}</td></tr>`;}).join('');
+}
+const log = document.getElementById('log'), q = document.getElementById('q'), btn = document.getElementById('send');
+function add(cls,t){ const d=document.createElement('div'); d.className='msg '+cls; d.textContent=t; log.appendChild(d); log.scrollTop=log.scrollHeight; return d; }
+const CHIPS = ['今天生意怎么样','库存要不要补货','推荐今晚的招牌组合','帮 2 号桌开台点菜'];
+function setChips(){
+  const el = document.getElementById('chips');
+  el.innerHTML = CHIPS.map(t=>`<span class="chip">${t}</span>`).join('');
+  el.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{q.value=c.textContent;send();});
+}
+async function send(){
+  const text = q.value.trim(); if(!text||btn.disabled) return;
+  q.value=''; btn.disabled=true; add('user',text);
+  const b = add('bot','…');
+  try{
+    const resp = await fetch('/api/assistant/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text})});
+    const reader = resp.body.getReader(), dec = new TextDecoder();
+    let buf='', out='';
+    while(true){
+      const {done,value} = await reader.read(); if(done) break;
+      buf += dec.decode(value,{stream:true});
+      let idx;
+      while((idx=buf.indexOf('\n\n'))>=0){
+        const blk = buf.slice(0,idx); buf = buf.slice(idx+2);
+        let ev='', data='';
+        for(const line of blk.split('\n')){
+          if(line.startsWith('event:')) ev = line.slice(6).trim();
+          if(line.startsWith('data:')) data += line.slice(5).trim();
+        }
+        if(!data) continue;
+        try{
+          const o = JSON.parse(data);
+          if(ev==='chunk' && o.content) out += o.content;
+          else if(o.type==='text' && o.delta) out += o.delta;
+          else if(typeof o.content==='string') out += o.content;
+        }catch(e){}
+        b.textContent = out || '…'; log.scrollTop = log.scrollHeight;
+      }
+    }
+    if(!out) b.textContent = '（未收到回复，请确认本地 DSH 已启动且插件已激活）';
+  }catch(e){ b.textContent = '连接失败：'+e.message; }
+  btn.disabled=false; setChips(); refresh();
+}
+btn.onclick = send;
+q.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();} });
+setChips(); refresh();
+</script>
+</body>
+</html>
